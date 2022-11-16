@@ -3,7 +3,11 @@ const express = require("express");
 const colors = require("colors");
 const cors = require("cors");
 const app = express();
+//midlewere
+app.use(cors());
+app.use(express.json());
 require("dotenv").config();
+
 app.get("/", async (req, res) => {
   res.send("Server Is Running");
 });
@@ -17,11 +21,42 @@ const client = new MongoClient(uri, {
 const dbRunner = async () => {
   try {
     const slotCollection = client.db(process.env.DB_NAME).collection("slots");
+    const Booking = client.db(process.env.DB_NAME).collection("bookings");
     app.get("/slots", async (req, res) => {
+      const date = req.query.date;
       const query = {};
-      const data = await slotCollection.find(query).toArray();
+      const options = await slotCollection.find(query).toArray();
+      const bookingQuery = { bookingDate: date };
+      const alreadyBooked = await Booking.find(bookingQuery).toArray();
+      options.forEach((option) => {
+        const optionBooked = alreadyBooked.filter(
+          (book) => book.treatmentName === option.name
+        );
+        const bookedSlots = optionBooked.map((book) => book.slot);
+        const remainingSlots = option.slots.filter(
+          (slot) => !bookedSlots.includes(slot)
+        );
+        option.slots = remainingSlots;
+        console.log(remainingSlots.length);
+      });
+
+      res.send(options);
+    });
+    app.post("/bookings", async (req, res) => {
+      const bookingInfo = req.body;
+      const query = {
+        bookingDate: bookingInfo.bookingDate,
+        treatmentName: bookingInfo.treatmentName,
+        email: bookingInfo.email,
+      };
+      const alreadyBooked = await Booking.find(query).toArray();
+      if (alreadyBooked.length) {
+        const message = `You Already Have a Booking on ${bookingInfo.treatmentName}`;
+        return res.send({ acknowledged: false, message });
+      }
+      console.log(bookingInfo);
+      const data = await Booking.insertOne(bookingInfo);
       res.send(data);
-      console.log("hitted the slots".blue.bgWhite);
     });
   } catch (error) {}
 };
