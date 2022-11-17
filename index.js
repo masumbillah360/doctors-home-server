@@ -22,6 +22,7 @@ const dbRunner = async () => {
   try {
     const slotCollection = client.db(process.env.DB_NAME).collection("slots");
     const Booking = client.db(process.env.DB_NAME).collection("bookings");
+    const Users = client.db(process.env.DB_NAME).collection("users");
     app.get("/slots", async (req, res) => {
       const date = req.query.date;
       const query = {};
@@ -57,6 +58,17 @@ const dbRunner = async () => {
       console.log(bookingInfo);
       const data = await Booking.insertOne(bookingInfo);
       res.send(data);
+    });
+    app.get("/bookings", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const data = await Booking.find(query).toArray();
+      res.send(data);
+    });
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await Users.insertOne(user);
+      res.send(result);
     });
   } catch (error) {}
 };
