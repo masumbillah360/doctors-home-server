@@ -70,6 +70,11 @@ const dbRunner = async () => {
       const result = await Users.insertOne(user);
       res.send(result);
     });
+    app.get("/users", async (req, res) => {
+      const query = {};
+      const allUsers = await Users.find(query).toArray();
+      res.send(allUsers);
+    });
   } catch (error) {}
 };
 dbRunner().catch((err) => console.log(err));
