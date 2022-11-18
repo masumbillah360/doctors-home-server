@@ -75,6 +75,58 @@ const dbRunner = async () => {
       const allUsers = await Users.find(query).toArray();
       res.send(allUsers);
     });
+
+    app.get("/v/slots", async (req, res) => {
+      const date = req.query.date;
+      console.log(date);
+      try {
+        const options = await slotCollection
+          .aggregate([
+            {
+              $lookup: {
+                from: "bookings",
+                localField: "name",
+                foreignField: "treatmentName",
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ["$bookingDate", date],
+                      },
+                    },
+                  },
+                ],
+                as: "booked",
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                slots: 1,
+                booked: {
+                  $map: {
+                    input: "$booked",
+                    as: "book",
+                    in: "$$book.slot",
+                  },
+                },
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                slots: {
+                  $setDifference: ["$slots", "$booked"],
+                },
+              },
+            },
+          ])
+          .toArray();
+        res.send(options);
+      } catch (error) {
+        console.log(error);
+      }
+    });
   } catch (error) {}
 };
 dbRunner().catch((err) => console.log(err));
@@ -83,5 +135,3 @@ app.listen(port, () => {
   console.log(`app is running on port ${port}`.red);
   console.log(uri.green);
 });
-//doctors-home
-//Doctors-Home
